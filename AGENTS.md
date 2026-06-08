@@ -1,0 +1,36 @@
+# AGENTS.md
+
+## Project Shape
+- Unity 6 project: editor version `6000.3.12f1` in `ProjectSettings/ProjectVersion.txt`.
+- Main playable scene and only build scene: `Assets/Scenes/main.unity` (`ProjectSettings/EditorBuildSettings.asset`).
+- Single default C# assembly: no `*.asmdef` files; scripts live under `Assets/Scripts/`.
+- URP project: `com.unity.render-pipelines.universal` `17.3.0` in `Packages/manifest.json`.
+
+## Runtime Wiring
+- `GameManager` owns high-level state (`MainMenu`, `LevelSelect`, `Playing`, `Paused`, results) and delegates to `LevelManager` plus `GameplayUI`.
+- `LevelManager` starts free drive or checkpoint levels, moves the player to spawn transforms, times checkpoint runs, and saves completion through `SaveManager`.
+- `CheckpointGroup` discovers child `Checkpoint` components, sorts/reassigns their `index`, and activates one checkpoint at a time.
+- `GameplayUI` is uGUI-based and can build its menus/HUD at runtime when scene references are missing; don’t assume UI exists only as prefabbed hierarchy.
+- Saves use `PlayerPrefs` keys in `SaveManager`, including `UnlockedLevel` and `Level_{n}_BestTime/BestStars`.
+
+## Input And Physics Quirks
+- Car controls use legacy `Input.GetAxis`, `Input.GetKey`, and `KeyCode`, even though the Input System package is installed; `activeInputHandler: 2` means both systems are enabled.
+- Physics code uses Unity 6 `Rigidbody.linearVelocity`; don’t “fix” it to old `velocity` API.
+- `CarController3D` expects wheel collider and visual references on the car object; reset/spawn flow calls `ResetCarState()` after moving the rigidbody.
+
+## Assets And Version Control
+- Run `git lfs pull` after cloning before opening in Unity; binary models/audio/textures are LFS-tracked via `.gitattributes`.
+- Keep Unity-generated folders out of commits: `Library/`, `Temp/`, `Obj/`, `Logs/`, `UserSettings/`, builds, generated `*.csproj`, and `*.sln` are ignored.
+- Preserve `.meta` files when adding, moving, or deleting assets so Unity references stay valid.
+
+## Verification
+- There are no repo-local CI workflows, test folders, or custom task-runner scripts checked in.
+- For script changes, prefer Unity/MCP validation or opening the project in Unity and checking the Console after asset refresh/compilation.
+- If using Unity CLI, point it at this project path and scene; no standalone build script is present, so editor Build Settings are the source of truth.
+
+<!-- lean-ctx -->
+## lean-ctx
+
+Prefer lean-ctx MCP tools over native equivalents for token savings.
+Full rules: @LEAN-CTX.md
+<!-- /lean-ctx -->

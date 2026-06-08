@@ -23,6 +23,11 @@ public class GameplayUI : MonoBehaviour
     public RectTransform checkpointMapDot;
     public float mapWorldRadius = 120f;
 
+    [Header("Mobile Controls")]
+    public MobileCarControls mobileControls;
+    public bool showMobileControls = true;
+    public bool showMobileControlsInEditor = true;
+
     [Header("Result")]
     public Text resultTitleText;
     public Text resultTimeText;
@@ -44,6 +49,7 @@ public class GameplayUI : MonoBehaviour
         CarController3D car = FindFirstObjectByType<CarController3D>();
         if (car != null) playerRigidbody = car.GetComponent<Rigidbody>();
         EnsureBuiltUI();
+        if (car != null && mobileControls != null) car.mobileControls = mobileControls;
     }
 
     private void OnEnable()
@@ -87,6 +93,7 @@ public class GameplayUI : MonoBehaviour
         if (directionArrowText != null) directionArrowText.gameObject.SetActive(checkpointMode);
         if (checkpointDistanceText != null) checkpointDistanceText.gameObject.SetActive(checkpointMode);
         if (mapRoot != null) mapRoot.gameObject.SetActive(checkpointMode);
+        EnsureMobileControls();
         RefreshHUD();
     }
 
@@ -207,7 +214,11 @@ public class GameplayUI : MonoBehaviour
         if (checkpointDistanceText == null)
             checkpointDistanceText = AddText(hud.transform, "CheckpointDistance", "Checkpoint 0m", 0, -405, 30);
 
-        if (mapRoot != null) return;
+        if (mapRoot != null)
+        {
+            EnsureMobileControls();
+            return;
+        }
 
         GameObject map = new GameObject("MiniMap", typeof(RectTransform));
         map.transform.SetParent(hud.transform, false);
@@ -234,6 +245,94 @@ public class GameplayUI : MonoBehaviour
         checkpointMapDot.sizeDelta = new Vector2(30f, 30f);
         Image dotImage = checkpointDot.AddComponent<Image>();
         dotImage.color = new Color(0f, 1f, 0.25f, 0.95f);
+
+        EnsureMobileControls();
+    }
+
+    private void EnsureMobileControls()
+    {
+        if (hud == null) return;
+
+        if (mobileControls == null)
+            mobileControls = hud.GetComponentInChildren<MobileCarControls>(true);
+
+        if (mobileControls == null)
+        {
+            GameObject analog = new GameObject("MobileAnalog", typeof(RectTransform));
+            analog.transform.SetParent(hud.transform, false);
+
+            RectTransform analogRect = analog.GetComponent<RectTransform>();
+            analogRect.anchorMin = Vector2.zero;
+            analogRect.anchorMax = Vector2.zero;
+            analogRect.pivot = new Vector2(0.5f, 0.5f);
+            analogRect.sizeDelta = new Vector2(190f, 190f);
+            analogRect.anchoredPosition = new Vector2(170f, 155f);
+
+            Image baseImage = analog.AddComponent<Image>();
+            baseImage.sprite = CreateCircleSprite("MobileAnalogBase", 96);
+            baseImage.color = new Color(0.08f, 0.13f, 0.18f, 0.58f);
+
+            mobileControls = analog.AddComponent<MobileCarControls>();
+            mobileControls.radius = 72f;
+
+            GameObject knob = new GameObject("Knob", typeof(RectTransform));
+            knob.transform.SetParent(analog.transform, false);
+
+            RectTransform knobRect = knob.GetComponent<RectTransform>();
+            knobRect.anchorMin = new Vector2(0.5f, 0.5f);
+            knobRect.anchorMax = new Vector2(0.5f, 0.5f);
+            knobRect.pivot = new Vector2(0.5f, 0.5f);
+            knobRect.sizeDelta = new Vector2(82f, 82f);
+            knobRect.anchoredPosition = Vector2.zero;
+
+            Image knobImage = knob.AddComponent<Image>();
+            knobImage.sprite = CreateCircleSprite("MobileAnalogKnob", 96);
+            knobImage.color = new Color(1f, 1f, 1f, 0.9f);
+            knobImage.raycastTarget = false;
+            mobileControls.knob = knobRect;
+
+            Text label = AddText(analog.transform, "AnalogLabel", "DRIVE", 0f, -120f, 22);
+            label.color = new Color(1f, 1f, 1f, 0.78f);
+        }
+
+        mobileControls.gameObject.SetActive(ShouldShowMobileControls());
+
+        CarController3D car = FindFirstObjectByType<CarController3D>();
+        if (car != null && car.mobileControls == null)
+            car.mobileControls = mobileControls;
+    }
+
+    private bool ShouldShowMobileControls()
+    {
+        if (!showMobileControls) return false;
+
+#if UNITY_EDITOR
+        if (showMobileControlsInEditor) return true;
+#endif
+
+        return Application.isMobilePlatform || Input.touchSupported;
+    }
+
+    private static Sprite CreateCircleSprite(string name, int size)
+    {
+        Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color clear = new Color(1f, 1f, 1f, 0f);
+        Color solid = Color.white;
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float radius = size * 0.5f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x, y), center);
+                texture.SetPixel(x, y, distance <= radius ? solid : clear);
+            }
+        }
+
+        texture.Apply();
+        texture.name = name;
+        return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f);
     }
 
     private void BuildPauseMenu()

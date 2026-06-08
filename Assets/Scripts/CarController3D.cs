@@ -29,6 +29,10 @@ public class CarController3D : MonoBehaviour
     public Vector3 centerOfMass = new Vector3(0f, -0.45f, 0.05f);
     public float lateralDrag = 2.5f;
 
+    [Header("Mobile Input")]
+    public MobileCarControls mobileControls;
+    public bool useMobileControls = true;
+
     private Rigidbody rb;
     private float steerAngle;
     private float throttle;
@@ -55,7 +59,10 @@ public class CarController3D : MonoBehaviour
 
     private void Update()
     {
-        throttle = Input.GetAxis("Vertical");
+        ResolveMobileControls();
+
+        Vector2 mobileInput = GetMobileInput();
+        throttle = UseStrongerAxis(Input.GetAxis("Vertical"), mobileInput.y);
         braking = Input.GetKey(KeyCode.Space);
         handBraking = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         UpdateWheelVisuals();
@@ -63,7 +70,10 @@ public class CarController3D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        float steerInput = Input.GetAxis("Horizontal");
+        ResolveMobileControls();
+
+        Vector2 mobileInput = GetMobileInput();
+        float steerInput = UseStrongerAxis(Input.GetAxis("Horizontal"), mobileInput.x);
         float speedKph = rb.linearVelocity.magnitude * 3.6f;
         float speedSteerFactor = Mathf.Lerp(1f, 0.45f, Mathf.InverseLerp(25f, maxSpeedKph, speedKph));
         steerAngle = Mathf.Lerp(steerAngle, steerInput * maxSteerAngle * speedSteerFactor, steerResponse * Time.fixedDeltaTime);
@@ -97,6 +107,23 @@ public class CarController3D : MonoBehaviour
         rb.linearVelocity = transform.TransformDirection(localVelocity);
     }
 
+    private void ResolveMobileControls()
+    {
+        if (!useMobileControls || mobileControls != null) return;
+        mobileControls = FindFirstObjectByType<MobileCarControls>();
+    }
+
+    private Vector2 GetMobileInput()
+    {
+        if (!useMobileControls || mobileControls == null) return Vector2.zero;
+        return mobileControls.Value;
+    }
+
+    private static float UseStrongerAxis(float keyboardAxis, float mobileAxis)
+    {
+        return Mathf.Abs(mobileAxis) > Mathf.Abs(keyboardAxis) ? mobileAxis : keyboardAxis;
+    }
+
     public void ResetCarState()
     {
         throttle = 0f;
@@ -108,6 +135,7 @@ public class CarController3D : MonoBehaviour
         ResetWheel(frontRightCollider);
         ResetWheel(rearLeftCollider);
         ResetWheel(rearRightCollider);
+        if (mobileControls != null) mobileControls.ResetInput();
         UpdateWheelVisuals();
     }
 

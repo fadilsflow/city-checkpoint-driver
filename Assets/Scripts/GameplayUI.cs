@@ -42,10 +42,12 @@ public class GameplayUI : MonoBehaviour
 
     private Rigidbody playerRigidbody;
     private Font uiFont;
+    private GameAudioManager audioManager;
 
     private void Awake()
     {
         if (levelManager == null) levelManager = FindFirstObjectByType<LevelManager>();
+        audioManager = FindFirstObjectByType<GameAudioManager>();
         CarController3D car = FindFirstObjectByType<CarController3D>();
         if (car != null) playerRigidbody = car.GetComponent<Rigidbody>();
         EnsureBuiltUI();
@@ -431,6 +433,7 @@ public class GameplayUI : MonoBehaviour
         image.color = new Color(0.08f, 0.13f, 0.18f, 0.92f);
         Button button = go.AddComponent<Button>();
         if (action != null) button.onClick.AddListener(action);
+        if (audioManager != null) button.onClick.AddListener(() => audioManager.PlayUIClick());
         Text label = AddText(go.transform, "Text", text, 0, 0, 28);
         label.rectTransform.sizeDelta = rect.sizeDelta;
         return button;

@@ -4,8 +4,10 @@ public class GameAudioManager : MonoBehaviour
 {
     public AudioClip backgroundMusic;
     public float musicVolume = 0.35f;
+    public AudioClip uiClickClip;
 
     private AudioSource musicSource;
+    private AudioSource uiClickSource;
 
     private void Awake()
     {
@@ -17,11 +19,44 @@ public class GameAudioManager : MonoBehaviour
         musicSource.playOnAwake = true;
         musicSource.spatialBlend = 0f;
         musicSource.volume = musicVolume;
+
+        uiClickSource = gameObject.AddComponent<AudioSource>();
+        uiClickSource.playOnAwake = false;
+        uiClickSource.spatialBlend = 0f;
+        uiClickSource.volume = 0.7f;
     }
 
     private void Start()
     {
         if (backgroundMusic != null && !musicSource.isPlaying)
             musicSource.Play();
+
+        if (uiClickClip == null)
+            uiClickClip = GenerateClickClip();
+    }
+
+    public void PlayUIClick()
+    {
+        if (uiClickClip == null) return;
+        uiClickSource.PlayOneShot(uiClickClip);
+    }
+
+    private AudioClip GenerateClickClip()
+    {
+        int sampleRate = 44100;
+        float duration = 0.08f;
+        int samples = Mathf.FloorToInt(sampleRate * duration);
+        float[] data = new float[samples];
+
+        for (int i = 0; i < samples; i++)
+        {
+            float t = i / (float)sampleRate;
+            float envelope = 1f - (t / duration);
+            data[i] = Mathf.Sin(t * 800f * Mathf.PI * 2f) * envelope * 0.5f;
+        }
+
+        AudioClip clip = AudioClip.Create("UIClick", samples, 1, sampleRate, false);
+        clip.SetData(data, 0);
+        return clip;
     }
 }

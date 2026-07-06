@@ -63,6 +63,12 @@ public class GameplayUI : MonoBehaviour
     private GameAudioManager audioManager;
     private bool syncingSettings;
 
+    private enum SettingsRowTextRole
+    {
+        Label,
+        Value
+    }
+
     private enum HudCorner
     {
         TopLeft,
@@ -450,34 +456,149 @@ public class GameplayUI : MonoBehaviour
     private void BuildSettingsMenu()
     {
         settingsMenu = CreatePanel("SettingsMenu", dimAlpha: 0.72f);
-        Transform card = CreateCenteredCard(settingsMenu.transform, "SettingsCard", new Vector2(980f, 760f));
+        Transform card = CreateCenteredCard(settingsMenu.transform, "SettingsCard", new Vector2(920f, 820f));
 
-        AddText(card, "Title", "SETTINGS", 0, 300, 50);
-        AddText(card, "AudioTitle", "AUDIO", 0, 210, 30);
+        Text title = AddText(card, "Title", "SETTINGS", 0, 340, 52);
+        title.rectTransform.sizeDelta = new Vector2(760f, 64f);
 
-        AddText(card, "MusicLabel", "Music Volume", -280, 130, 26, TextAnchor.MiddleLeft);
-        musicVolumeSlider = AddSlider(card, "MusicSlider", 40, 130, 520, OnMusicVolumeChanged);
-        musicVolumeValueText = AddText(card, "MusicValue", "70%", 360, 130, 24, TextAnchor.MiddleRight);
-        musicVolumeValueText.rectTransform.sizeDelta = new Vector2(100f, 44f);
+        Text audioTitle = AddText(card, "AudioTitle", "AUDIO", 0, 250, 32);
+        audioTitle.rectTransform.sizeDelta = new Vector2(760f, 44f);
+        audioTitle.color = new Color(0.78f, 0.86f, 0.95f, 1f);
 
-        AddText(card, "SfxLabel", "SFX Volume", -280, 50, 26, TextAnchor.MiddleLeft);
-        sfxVolumeSlider = AddSlider(card, "SfxSlider", 40, 50, 520, OnSfxVolumeChanged);
-        sfxVolumeValueText = AddText(card, "SfxValue", "70%", 360, 50, 24, TextAnchor.MiddleRight);
-        sfxVolumeValueText.rectTransform.sizeDelta = new Vector2(100f, 44f);
+        Transform musicRow = CreateSettingsRow(card, "MusicRow", 165f);
+        AddSettingsRowText(musicRow, "MusicLabel", "Music Volume", SettingsRowTextRole.Label);
+        musicVolumeSlider = AddSettingsRowSlider(musicRow, "MusicSlider", OnMusicVolumeChanged);
+        musicVolumeValueText = AddSettingsRowText(musicRow, "MusicValue", "70%", SettingsRowTextRole.Value);
 
-        AddText(card, "InfoTitle", "ABOUT", 0, -40, 30);
+        Transform sfxRow = CreateSettingsRow(card, "SfxRow", 85f);
+        AddSettingsRowText(sfxRow, "SfxLabel", "SFX Volume", SettingsRowTextRole.Label);
+        sfxVolumeSlider = AddSettingsRowSlider(sfxRow, "SfxSlider", OnSfxVolumeChanged);
+        sfxVolumeValueText = AddSettingsRowText(sfxRow, "SfxValue", "70%", SettingsRowTextRole.Value);
+
+        Text infoTitle = AddText(card, "InfoTitle", "ABOUT", 0, -20, 32);
+        infoTitle.rectTransform.sizeDelta = new Vector2(760f, 44f);
+        infoTitle.color = new Color(0.78f, 0.86f, 0.95f, 1f);
+
         gameInfoText = AddText(card, "GameInfo",
             "City Checkpoint Driver\n\n" +
-            "Drive through the city and reach every checkpoint\n" +
-            "before time runs out. Earn stars to unlock new levels,\n" +
-            "or explore freely in Free Drive mode.\n\n" +
-            "2 levels available • Mobile touch controls supported\n" +
+            "Drive through the city and reach every checkpoint before time runs out.\n" +
+            "Earn stars to unlock new levels, or explore freely in Free Drive mode.\n\n" +
+            "2 levels available  •  Mobile touch controls supported\n" +
             "Version " + Application.version,
-            0, -170, 22);
-        gameInfoText.rectTransform.sizeDelta = new Vector2(900f, 260f);
-        gameInfoText.color = new Color(0.88f, 0.92f, 0.96f, 1f);
+            0, -145, 24);
+        gameInfoText.rectTransform.sizeDelta = new Vector2(780f, 220f);
+        gameInfoText.lineSpacing = 1.15f;
+        gameInfoText.color = new Color(0.9f, 0.93f, 0.97f, 1f);
 
-        AddButton(card, "BackButton", "BACK", 0, -300, ButtonSettingsBack);
+        AddButton(card, "BackButton", "BACK", 0, -320, ButtonSettingsBack);
+    }
+
+    private static Transform CreateSettingsRow(Transform parent, string name, float y, float width = 820f, float height = 56f)
+    {
+        GameObject row = new GameObject(name, typeof(RectTransform));
+        row.transform.SetParent(parent, false);
+
+        RectTransform rect = row.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(width, height);
+        rect.anchoredPosition = new Vector2(0f, y);
+
+        return row.transform;
+    }
+
+    private Text AddSettingsRowText(Transform row, string name, string text, SettingsRowTextRole role)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(row, false);
+
+        RectTransform rect = go.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(role == SettingsRowTextRole.Label ? 210f : 90f, 48f);
+        rect.anchorMin = new Vector2(role == SettingsRowTextRole.Label ? 0f : 1f, 0.5f);
+        rect.anchorMax = new Vector2(role == SettingsRowTextRole.Label ? 0f : 1f, 0.5f);
+        rect.pivot = new Vector2(role == SettingsRowTextRole.Label ? 0f : 1f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+
+        Text label = go.AddComponent<Text>();
+        label.font = uiFont;
+        label.text = text;
+        label.fontSize = 28;
+        label.alignment = role == SettingsRowTextRole.Label ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        return label;
+    }
+
+    private Slider AddSettingsRowSlider(Transform row, string name, UnityEngine.Events.UnityAction<float> onValueChanged)
+    {
+        GameObject sliderGo = new GameObject(name, typeof(RectTransform));
+        sliderGo.transform.SetParent(row, false);
+
+        RectTransform sliderRect = sliderGo.GetComponent<RectTransform>();
+        sliderRect.anchorMin = new Vector2(0f, 0.5f);
+        sliderRect.anchorMax = new Vector2(0f, 0.5f);
+        sliderRect.pivot = new Vector2(0f, 0.5f);
+        sliderRect.sizeDelta = new Vector2(498f, 44f);
+        sliderRect.anchoredPosition = new Vector2(220f, 0f);
+
+        return ConfigureSlider(sliderGo, onValueChanged);
+    }
+
+    private Slider ConfigureSlider(GameObject sliderGo, UnityEngine.Events.UnityAction<float> onValueChanged)
+    {
+        GameObject background = new GameObject("Background", typeof(RectTransform));
+        background.transform.SetParent(sliderGo.transform, false);
+        RectTransform backgroundRect = background.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = new Vector2(0f, 0.35f);
+        backgroundRect.anchorMax = new Vector2(1f, 0.65f);
+        backgroundRect.offsetMin = Vector2.zero;
+        backgroundRect.offsetMax = Vector2.zero;
+        Image backgroundImage = background.AddComponent<Image>();
+        backgroundImage.color = new Color(0.12f, 0.16f, 0.22f, 0.95f);
+
+        GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+        fillArea.transform.SetParent(sliderGo.transform, false);
+        RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
+        fillAreaRect.anchorMin = new Vector2(0f, 0.35f);
+        fillAreaRect.anchorMax = new Vector2(1f, 0.65f);
+        fillAreaRect.offsetMin = new Vector2(8f, 0f);
+        fillAreaRect.offsetMax = new Vector2(-8f, 0f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform));
+        fill.transform.SetParent(fillArea.transform, false);
+        RectTransform fillRect = fill.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+        Image fillImage = fill.AddComponent<Image>();
+        fillImage.color = new Color(0.25f, 0.72f, 1f, 0.95f);
+
+        GameObject handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+        handleArea.transform.SetParent(sliderGo.transform, false);
+        RectTransform handleAreaRect = handleArea.GetComponent<RectTransform>();
+        handleAreaRect.anchorMin = Vector2.zero;
+        handleAreaRect.anchorMax = Vector2.one;
+        handleAreaRect.offsetMin = new Vector2(8f, 0f);
+        handleAreaRect.offsetMax = new Vector2(-8f, 0f);
+
+        GameObject handle = new GameObject("Handle", typeof(RectTransform));
+        handle.transform.SetParent(handleArea.transform, false);
+        RectTransform handleRect = handle.GetComponent<RectTransform>();
+        handleRect.sizeDelta = new Vector2(24f, 24f);
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = Color.white;
+
+        Slider slider = sliderGo.AddComponent<Slider>();
+        slider.fillRect = fillRect;
+        slider.handleRect = handleRect;
+        slider.targetGraphic = handleImage;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.value = 0.7f;
+        if (onValueChanged != null) slider.onValueChanged.AddListener(onValueChanged);
+        return slider;
     }
 
     private void RefreshSettings()
@@ -678,59 +799,7 @@ public class GameplayUI : MonoBehaviour
         RectTransform sliderRect = sliderGo.GetComponent<RectTransform>();
         sliderRect.sizeDelta = new Vector2(width, 40f);
         sliderRect.anchoredPosition = new Vector2(x, y);
-
-        GameObject background = new GameObject("Background", typeof(RectTransform));
-        background.transform.SetParent(sliderGo.transform, false);
-        RectTransform backgroundRect = background.GetComponent<RectTransform>();
-        backgroundRect.anchorMin = new Vector2(0f, 0.35f);
-        backgroundRect.anchorMax = new Vector2(1f, 0.65f);
-        backgroundRect.offsetMin = Vector2.zero;
-        backgroundRect.offsetMax = Vector2.zero;
-        Image backgroundImage = background.AddComponent<Image>();
-        backgroundImage.color = new Color(0.12f, 0.16f, 0.22f, 0.95f);
-
-        GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
-        fillArea.transform.SetParent(sliderGo.transform, false);
-        RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
-        fillAreaRect.anchorMin = new Vector2(0f, 0.35f);
-        fillAreaRect.anchorMax = new Vector2(1f, 0.65f);
-        fillAreaRect.offsetMin = new Vector2(8f, 0f);
-        fillAreaRect.offsetMax = new Vector2(-8f, 0f);
-
-        GameObject fill = new GameObject("Fill", typeof(RectTransform));
-        fill.transform.SetParent(fillArea.transform, false);
-        RectTransform fillRect = fill.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = Vector2.one;
-        fillRect.offsetMin = Vector2.zero;
-        fillRect.offsetMax = Vector2.zero;
-        Image fillImage = fill.AddComponent<Image>();
-        fillImage.color = new Color(0.25f, 0.72f, 1f, 0.95f);
-
-        GameObject handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
-        handleArea.transform.SetParent(sliderGo.transform, false);
-        RectTransform handleAreaRect = handleArea.GetComponent<RectTransform>();
-        handleAreaRect.anchorMin = Vector2.zero;
-        handleAreaRect.anchorMax = Vector2.one;
-        handleAreaRect.offsetMin = new Vector2(8f, 0f);
-        handleAreaRect.offsetMax = new Vector2(-8f, 0f);
-
-        GameObject handle = new GameObject("Handle", typeof(RectTransform));
-        handle.transform.SetParent(handleArea.transform, false);
-        RectTransform handleRect = handle.GetComponent<RectTransform>();
-        handleRect.sizeDelta = new Vector2(22f, 22f);
-        Image handleImage = handle.AddComponent<Image>();
-        handleImage.color = Color.white;
-
-        Slider slider = sliderGo.AddComponent<Slider>();
-        slider.fillRect = fillRect;
-        slider.handleRect = handleRect;
-        slider.targetGraphic = handleImage;
-        slider.minValue = 0f;
-        slider.maxValue = 1f;
-        slider.value = 0.7f;
-        if (onValueChanged != null) slider.onValueChanged.AddListener(onValueChanged);
-        return slider;
+        return ConfigureSlider(sliderGo, onValueChanged);
     }
 
     private static void EnsureEventSystem()

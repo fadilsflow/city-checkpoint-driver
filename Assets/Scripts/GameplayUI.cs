@@ -242,7 +242,7 @@ public class GameplayUI : MonoBehaviour
         hud = CreatePanel("HUD", false);
         timerText = AddHudLabel(hud.transform, "Timer", "Time: 00:00.00", 30);
         checkpointText = AddHudLabel(hud.transform, "Checkpoint", "Checkpoint: 1 / 4", 30);
-        speedText = AddText(hud.transform, "Speed", "0 km/h", 0, 0, 30, TextAnchor.MiddleRight);
+        speedText = AddHudLabel(hud.transform, "Speed", "0 km/h", 30);
         AddButton(hud.transform, "PauseButton", "PAUSE", 0, 0, ButtonResume).onClick.RemoveAllListeners();
         Button pauseButton = hud.transform.Find("PauseButton").GetComponent<Button>();
         pauseButton.onClick.AddListener(() => GameManager.Instance.Pause());
@@ -303,7 +303,7 @@ public class GameplayUI : MonoBehaviour
         {
             RectTransform rect = GetHudLabelPanel(timerText);
             rect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
-            SetCornerAnchor(rect, HudCorner.TopLeft, new Vector2(HudEdgePadding, -HudEdgePadding));
+            SetCornerAnchor(rect, HudCorner.TopLeft, GetHudLeftStackPosition(0));
             timerText.alignment = TextAnchor.MiddleLeft;
         }
 
@@ -311,16 +311,16 @@ public class GameplayUI : MonoBehaviour
         {
             RectTransform rect = GetHudLabelPanel(checkpointText);
             rect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
-            SetCornerAnchor(rect, HudCorner.TopLeft, new Vector2(HudEdgePadding, -(HudEdgePadding + HudLabelHeight + HudLabelGap)));
+            SetCornerAnchor(rect, HudCorner.TopLeft, GetHudLeftStackPosition(1));
             checkpointText.alignment = TextAnchor.MiddleLeft;
         }
 
         if (speedText != null)
         {
-            RectTransform rect = speedText.rectTransform;
-            rect.sizeDelta = new Vector2(240f, 44f);
-            SetCornerAnchor(rect, HudCorner.BottomRight, new Vector2(-HudEdgePadding, HudEdgePadding));
-            speedText.alignment = TextAnchor.MiddleRight;
+            RectTransform rect = GetHudLabelPanel(speedText);
+            rect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
+            SetCornerAnchor(rect, HudCorner.TopLeft, GetHudLeftStackPosition(2));
+            speedText.alignment = TextAnchor.MiddleLeft;
         }
 
         Transform pauseTransform = hud.transform.Find("PauseButton");
@@ -355,6 +355,12 @@ public class GameplayUI : MonoBehaviour
         rect.anchorMax = anchor;
         rect.pivot = anchor;
         rect.anchoredPosition = anchoredPosition;
+    }
+
+    private static Vector2 GetHudLeftStackPosition(int index)
+    {
+        float y = HudEdgePadding + index * (HudLabelHeight + HudLabelGap);
+        return new Vector2(HudEdgePadding, -y);
     }
 
     private void EnsureMobileControls()

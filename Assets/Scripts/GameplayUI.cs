@@ -40,9 +40,27 @@ public class GameplayUI : MonoBehaviour
     public Text level2InfoText;
     public Text soonText;
 
+    private const float HudEdgePadding = 24f;
+    private const float HudMapSize = 180f;
+    private const float HudPauseWidth = 130f;
+    private const float HudPauseHeight = 48f;
+    private const float HudTopRightGap = 12f;
+    private const float HudLabelWidth = 420f;
+    private const float HudLabelHeight = 44f;
+    private const float HudLabelGap = 8f;
+    private static readonly Color HudLabelBackground = new Color(0.08f, 0.13f, 0.18f, 0.85f);
+
     private Rigidbody playerRigidbody;
     private Font uiFont;
     private GameAudioManager audioManager;
+
+    private enum HudCorner
+    {
+        TopLeft,
+        TopRight,
+        BottomRight,
+        BottomLeft
+    }
 
     private void Awake()
     {
@@ -90,8 +108,8 @@ public class GameplayUI : MonoBehaviour
     {
         SetOnly(hud);
         bool checkpointMode = mode == GameMode.Checkpoint;
-        if (timerText != null) timerText.gameObject.SetActive(checkpointMode);
-        if (checkpointText != null) checkpointText.gameObject.SetActive(checkpointMode);
+        if (timerText != null) GetHudLabelPanel(timerText).gameObject.SetActive(checkpointMode);
+        if (checkpointText != null) GetHudLabelPanel(checkpointText).gameObject.SetActive(checkpointMode);
         if (directionArrowText != null) directionArrowText.gameObject.SetActive(checkpointMode);
         if (checkpointDistanceText != null) checkpointDistanceText.gameObject.SetActive(checkpointMode);
         if (mapRoot != null) mapRoot.gameObject.SetActive(checkpointMode);
@@ -197,13 +215,14 @@ public class GameplayUI : MonoBehaviour
     private void BuildHUD()
     {
         hud = CreatePanel("HUD", false);
-        timerText = AddText(hud.transform, "Timer", "Time: 00:00.00", -760, 470, 30, TextAnchor.MiddleLeft);
-        checkpointText = AddText(hud.transform, "Checkpoint", "Checkpoint: 1 / 4", -760, 425, 30, TextAnchor.MiddleLeft);
-        speedText = AddText(hud.transform, "Speed", "0 km/h", 760, 470, 30, TextAnchor.MiddleRight);
-        AddButton(hud.transform, "PauseButton", "PAUSE", 760, 400, ButtonResume).onClick.RemoveAllListeners();
+        timerText = AddHudLabel(hud.transform, "Timer", "Time: 00:00.00", 30);
+        checkpointText = AddHudLabel(hud.transform, "Checkpoint", "Checkpoint: 1 / 4", 30);
+        speedText = AddText(hud.transform, "Speed", "0 km/h", 0, 0, 30, TextAnchor.MiddleRight);
+        AddButton(hud.transform, "PauseButton", "PAUSE", 0, 0, ButtonResume).onClick.RemoveAllListeners();
         Button pauseButton = hud.transform.Find("PauseButton").GetComponent<Button>();
         pauseButton.onClick.AddListener(() => GameManager.Instance.Pause());
         EnsureHUDExtras();
+        ApplyHUDLayout();
     }
 
     private void EnsureHUDExtras()
@@ -218,6 +237,7 @@ public class GameplayUI : MonoBehaviour
 
         if (mapRoot != null)
         {
+            ApplyHUDLayout();
             EnsureMobileControls();
             return;
         }
@@ -225,8 +245,6 @@ public class GameplayUI : MonoBehaviour
         GameObject map = new GameObject("MiniMap", typeof(RectTransform));
         map.transform.SetParent(hud.transform, false);
         mapRoot = map.GetComponent<RectTransform>();
-        mapRoot.sizeDelta = new Vector2(230f, 230f);
-        mapRoot.anchoredPosition = new Vector2(735f, 220f);
         Image mapImage = map.AddComponent<Image>();
         mapImage.color = new Color(0f, 0f, 0f, 0.45f);
 
@@ -248,7 +266,70 @@ public class GameplayUI : MonoBehaviour
         Image dotImage = checkpointDot.AddComponent<Image>();
         dotImage.color = new Color(0f, 1f, 0.25f, 0.95f);
 
+        ApplyHUDLayout();
         EnsureMobileControls();
+    }
+
+    private void ApplyHUDLayout()
+    {
+        if (hud == null) return;
+
+        if (timerText != null)
+        {
+            RectTransform rect = GetHudLabelPanel(timerText);
+            rect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
+            SetCornerAnchor(rect, HudCorner.TopLeft, new Vector2(HudEdgePadding, -HudEdgePadding));
+            timerText.alignment = TextAnchor.MiddleLeft;
+        }
+
+        if (checkpointText != null)
+        {
+            RectTransform rect = GetHudLabelPanel(checkpointText);
+            rect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
+            SetCornerAnchor(rect, HudCorner.TopLeft, new Vector2(HudEdgePadding, -(HudEdgePadding + HudLabelHeight + HudLabelGap)));
+            checkpointText.alignment = TextAnchor.MiddleLeft;
+        }
+
+        if (speedText != null)
+        {
+            RectTransform rect = speedText.rectTransform;
+            rect.sizeDelta = new Vector2(240f, 44f);
+            SetCornerAnchor(rect, HudCorner.BottomRight, new Vector2(-HudEdgePadding, HudEdgePadding));
+            speedText.alignment = TextAnchor.MiddleRight;
+        }
+
+        Transform pauseTransform = hud.transform.Find("PauseButton");
+        if (pauseTransform != null)
+        {
+            RectTransform pauseRect = pauseTransform.GetComponent<RectTransform>();
+            pauseRect.sizeDelta = new Vector2(HudPauseWidth, HudPauseHeight);
+            float pauseYOffset = -(HudEdgePadding + (HudMapSize - HudPauseHeight) * 0.5f);
+            SetCornerAnchor(pauseRect, HudCorner.TopRight, new Vector2(-HudEdgePadding, pauseYOffset));
+        }
+
+        if (mapRoot != null)
+        {
+            mapRoot.sizeDelta = new Vector2(HudMapSize, HudMapSize);
+            float mapX = -(HudEdgePadding + HudPauseWidth + HudTopRightGap);
+            SetCornerAnchor(mapRoot, HudCorner.TopRight, new Vector2(mapX, -HudEdgePadding));
+        }
+    }
+
+    private static void SetCornerAnchor(RectTransform rect, HudCorner corner, Vector2 anchoredPosition)
+    {
+        Vector2 anchor = corner switch
+        {
+            HudCorner.TopLeft => new Vector2(0f, 1f),
+            HudCorner.TopRight => new Vector2(1f, 1f),
+            HudCorner.BottomRight => new Vector2(1f, 0f),
+            HudCorner.BottomLeft => new Vector2(0f, 0f),
+            _ => new Vector2(0.5f, 0.5f)
+        };
+
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = anchor;
+        rect.anchoredPosition = anchoredPosition;
     }
 
     private void EnsureMobileControls()
@@ -404,6 +485,48 @@ public class GameplayUI : MonoBehaviour
         }
 
         return panel;
+    }
+
+    private Text AddHudLabel(Transform parent, string name, string text, int fontSize)
+    {
+        GameObject panel = new GameObject(name + "Panel", typeof(RectTransform));
+        panel.transform.SetParent(parent, false);
+
+        RectTransform panelRect = panel.GetComponent<RectTransform>();
+        panelRect.sizeDelta = new Vector2(HudLabelWidth, HudLabelHeight);
+
+        Image background = panel.AddComponent<Image>();
+        background.color = HudLabelBackground;
+        background.raycastTarget = false;
+
+        GameObject labelGo = new GameObject(name, typeof(RectTransform));
+        labelGo.transform.SetParent(panel.transform, false);
+
+        RectTransform labelRect = labelGo.GetComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = new Vector2(12f, 0f);
+        labelRect.offsetMax = new Vector2(-12f, 0f);
+
+        Text label = labelGo.AddComponent<Text>();
+        label.font = uiFont;
+        label.text = text;
+        label.fontSize = fontSize;
+        label.alignment = TextAnchor.MiddleLeft;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        return label;
+    }
+
+    private RectTransform GetHudLabelPanel(Text label)
+    {
+        if (label == null) return null;
+
+        RectTransform parent = label.rectTransform.parent as RectTransform;
+        if (parent != null && parent.parent == hud.transform)
+            return parent;
+
+        return label.rectTransform;
     }
 
     private Text AddText(Transform parent, string name, string text, float x, float y, int size, TextAnchor anchor = TextAnchor.MiddleCenter)

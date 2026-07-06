@@ -5,12 +5,38 @@ public class GameAudioManager : MonoBehaviour
     public AudioClip backgroundMusic;
     public float musicVolume = 0.35f;
     public AudioClip uiClickClip;
+    public float sfxVolume = 0.7f;
 
     private AudioSource musicSource;
     private AudioSource uiClickSource;
 
+    public float MusicVolume
+    {
+        get => musicVolume;
+        set
+        {
+            musicVolume = Mathf.Clamp01(value);
+            if (musicSource != null) musicSource.volume = musicVolume;
+            SaveManager.SetMusicVolume(musicVolume);
+        }
+    }
+
+    public float SfxVolume
+    {
+        get => sfxVolume;
+        set
+        {
+            sfxVolume = Mathf.Clamp01(value);
+            if (uiClickSource != null) uiClickSource.volume = sfxVolume;
+            SaveManager.SetSfxVolume(sfxVolume);
+        }
+    }
+
     private void Awake()
     {
+        musicVolume = SaveManager.MusicVolume;
+        sfxVolume = SaveManager.SfxVolume;
+
         musicSource = GetComponent<AudioSource>();
         if (musicSource == null) musicSource = gameObject.AddComponent<AudioSource>();
 
@@ -23,7 +49,7 @@ public class GameAudioManager : MonoBehaviour
         uiClickSource = gameObject.AddComponent<AudioSource>();
         uiClickSource.playOnAwake = false;
         uiClickSource.spatialBlend = 0f;
-        uiClickSource.volume = 0.7f;
+        uiClickSource.volume = sfxVolume;
     }
 
     private void Start()

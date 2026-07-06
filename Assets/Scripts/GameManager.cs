@@ -8,6 +8,8 @@ public class GameManager : MonoBehaviour
     public LevelManager levelManager;
     public GameplayUI ui;
 
+    private GameState settingsReturnState = GameState.MainMenu;
+
     private void Awake()
     {
         Instance = this;
@@ -29,6 +31,7 @@ public class GameManager : MonoBehaviour
         {
             if (State == GameState.Playing) Pause();
             else if (State == GameState.Paused) Resume();
+            else if (State == GameState.Settings) CloseSettings();
         }
     }
 
@@ -44,6 +47,33 @@ public class GameManager : MonoBehaviour
     {
         State = GameState.LevelSelect;
         if (ui != null) ui.ShowLevelSelect();
+    }
+
+    public void ShowSettings()
+    {
+        settingsReturnState = State;
+        State = GameState.Settings;
+        if (settingsReturnState == GameState.Paused)
+            Time.timeScale = 0f;
+        if (ui != null) ui.ShowSettings();
+    }
+
+    public void CloseSettings()
+    {
+        switch (settingsReturnState)
+        {
+            case GameState.Paused:
+                State = GameState.Paused;
+                Time.timeScale = 0f;
+                if (ui != null) ui.ShowPause();
+                break;
+            case GameState.LevelSelect:
+                ShowLevelSelect();
+                break;
+            default:
+                ShowMainMenu();
+                break;
+        }
     }
 
     public void StartFreeDrive()

@@ -38,4 +38,23 @@ public static class SaveManager
 
         PlayerPrefs.Save();
     }
+
+    private const string MusicVolumeKey = "MusicVolume";
+    private const string SfxVolumeKey = "SfxVolume";
+
+    public static float MusicVolume => PlayerPrefs.GetFloat(MusicVolumeKey, 0.35f);
+
+    public static float SfxVolume => PlayerPrefs.GetFloat(SfxVolumeKey, 0.7f);
+
+    public static void SetMusicVolume(float volume)
+    {
+        PlayerPrefs.SetFloat(MusicVolumeKey, Mathf.Clamp01(volume));
+        PlayerPrefs.Save();
+    }
+
+    public static void SetSfxVolume(float volume)
+    {
+        PlayerPrefs.SetFloat(SfxVolumeKey, Mathf.Clamp01(volume));
+        PlayerPrefs.Save();
+    }
 }

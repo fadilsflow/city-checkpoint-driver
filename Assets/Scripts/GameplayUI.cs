@@ -11,6 +11,7 @@ public class GameplayUI : MonoBehaviour
     public GameObject hud;
     public GameObject pauseMenu;
     public GameObject resultScreen;
+    public GameObject settingsMenu;
 
     [Header("HUD")]
     public Text timerText;
@@ -40,6 +41,13 @@ public class GameplayUI : MonoBehaviour
     public Text level2InfoText;
     public Text soonText;
 
+    [Header("Settings")]
+    public Slider musicVolumeSlider;
+    public Slider sfxVolumeSlider;
+    public Text musicVolumeValueText;
+    public Text sfxVolumeValueText;
+    public Text gameInfoText;
+
     private const float HudEdgePadding = 24f;
     private const float HudMapSize = 180f;
     private const float HudPauseWidth = 130f;
@@ -53,6 +61,7 @@ public class GameplayUI : MonoBehaviour
     private Rigidbody playerRigidbody;
     private Font uiFont;
     private GameAudioManager audioManager;
+    private bool syncingSettings;
 
     private enum HudCorner
     {
@@ -102,6 +111,12 @@ public class GameplayUI : MonoBehaviour
     {
         SetOnly(levelSelect);
         RefreshLevelSelect();
+    }
+
+    public void ShowSettings()
+    {
+        SetOnly(settingsMenu);
+        RefreshSettings();
     }
 
     public void ShowHUD(GameMode mode)
@@ -163,6 +178,8 @@ public class GameplayUI : MonoBehaviour
     public void ButtonRestart() => GameManager.Instance.Restart();
     public void ButtonNextLevel() => GameManager.Instance.NextLevel();
     public void ButtonQuit() => Application.Quit();
+    public void ButtonSettings() => GameManager.Instance.ShowSettings();
+    public void ButtonSettingsBack() => GameManager.Instance.CloseSettings();
 
     private void EnsureBuiltUI()
     {
@@ -187,16 +204,18 @@ public class GameplayUI : MonoBehaviour
         else EnsureHUDExtras();
         if (pauseMenu == null) BuildPauseMenu();
         if (resultScreen == null) BuildResultScreen();
+        if (settingsMenu == null) BuildSettingsMenu();
     }
 
     private void BuildMainMenu()
     {
         mainMenu = CreatePanel("MainMenu");
         AddText(mainMenu.transform, "Title", "CITY CHECKPOINT DRIVER", 0, 250, 56);
-        AddButton(mainMenu.transform, "PlayButton", "PLAY", 0, 90, ButtonLevelSelect);
-        AddButton(mainMenu.transform, "FreeDriveButton", "FREE DRIVE", 0, 0, ButtonFreeDrive);
-        AddButton(mainMenu.transform, "QuitButton", "QUIT", 0, -90, ButtonQuit);
-        AddText(mainMenu.transform, "SoonHint", "2 levels playable • more levels coming soon", 0, -210, 26);
+        AddButton(mainMenu.transform, "PlayButton", "PLAY", 0, 110, ButtonLevelSelect);
+        AddButton(mainMenu.transform, "FreeDriveButton", "FREE DRIVE", 0, 20, ButtonFreeDrive);
+        AddButton(mainMenu.transform, "SettingsButton", "SETTINGS", 0, -70, ButtonSettings);
+        AddButton(mainMenu.transform, "QuitButton", "QUIT", 0, -160, ButtonQuit);
+        AddText(mainMenu.transform, "SoonHint", "2 levels playable • more levels coming soon", 0, -280, 26);
     }
 
     private void BuildLevelSelect()
@@ -422,9 +441,80 @@ public class GameplayUI : MonoBehaviour
     {
         pauseMenu = CreatePanel("PauseMenu");
         AddText(pauseMenu.transform, "Title", "PAUSED", 0, 220, 52);
-        AddButton(pauseMenu.transform, "ResumeButton", "RESUME", 0, 80, ButtonResume);
-        AddButton(pauseMenu.transform, "RestartButton", "RESTART", 0, -10, ButtonRestart);
-        AddButton(pauseMenu.transform, "MainMenuButton", "MAIN MENU", 0, -100, ButtonMainMenu);
+        AddButton(pauseMenu.transform, "ResumeButton", "RESUME", 0, 100, ButtonResume);
+        AddButton(pauseMenu.transform, "RestartButton", "RESTART", 0, 10, ButtonRestart);
+        AddButton(pauseMenu.transform, "SettingsButton", "SETTINGS", 0, -80, ButtonSettings);
+        AddButton(pauseMenu.transform, "MainMenuButton", "MAIN MENU", 0, -170, ButtonMainMenu);
+    }
+
+    private void BuildSettingsMenu()
+    {
+        settingsMenu = CreatePanel("SettingsMenu", dimAlpha: 0.72f);
+        Transform card = CreateCenteredCard(settingsMenu.transform, "SettingsCard", new Vector2(980f, 760f));
+
+        AddText(card, "Title", "SETTINGS", 0, 300, 50);
+        AddText(card, "AudioTitle", "AUDIO", 0, 210, 30);
+
+        AddText(card, "MusicLabel", "Music Volume", -280, 130, 26, TextAnchor.MiddleLeft);
+        musicVolumeSlider = AddSlider(card, "MusicSlider", 40, 130, 520, OnMusicVolumeChanged);
+        musicVolumeValueText = AddText(card, "MusicValue", "70%", 360, 130, 24, TextAnchor.MiddleRight);
+        musicVolumeValueText.rectTransform.sizeDelta = new Vector2(100f, 44f);
+
+        AddText(card, "SfxLabel", "SFX Volume", -280, 50, 26, TextAnchor.MiddleLeft);
+        sfxVolumeSlider = AddSlider(card, "SfxSlider", 40, 50, 520, OnSfxVolumeChanged);
+        sfxVolumeValueText = AddText(card, "SfxValue", "70%", 360, 50, 24, TextAnchor.MiddleRight);
+        sfxVolumeValueText.rectTransform.sizeDelta = new Vector2(100f, 44f);
+
+        AddText(card, "InfoTitle", "ABOUT", 0, -40, 30);
+        gameInfoText = AddText(card, "GameInfo",
+            "City Checkpoint Driver\n\n" +
+            "Drive through the city and reach every checkpoint\n" +
+            "before time runs out. Earn stars to unlock new levels,\n" +
+            "or explore freely in Free Drive mode.\n\n" +
+            "2 levels available • Mobile touch controls supported\n" +
+            "Version " + Application.version,
+            0, -170, 22);
+        gameInfoText.rectTransform.sizeDelta = new Vector2(900f, 260f);
+        gameInfoText.color = new Color(0.88f, 0.92f, 0.96f, 1f);
+
+        AddButton(card, "BackButton", "BACK", 0, -300, ButtonSettingsBack);
+    }
+
+    private void RefreshSettings()
+    {
+        if (audioManager == null) audioManager = FindFirstObjectByType<GameAudioManager>();
+        if (audioManager == null) return;
+
+        syncingSettings = true;
+        if (musicVolumeSlider != null) musicVolumeSlider.SetValueWithoutNotify(audioManager.MusicVolume);
+        if (sfxVolumeSlider != null) sfxVolumeSlider.SetValueWithoutNotify(audioManager.SfxVolume);
+        syncingSettings = false;
+        UpdateVolumeLabels();
+    }
+
+    private void OnMusicVolumeChanged(float value)
+    {
+        if (syncingSettings) return;
+        if (audioManager == null) return;
+        audioManager.MusicVolume = value;
+        UpdateVolumeLabels();
+    }
+
+    private void OnSfxVolumeChanged(float value)
+    {
+        if (syncingSettings) return;
+        if (audioManager == null) return;
+        audioManager.SfxVolume = value;
+        audioManager.PlayUIClick();
+        UpdateVolumeLabels();
+    }
+
+    private void UpdateVolumeLabels()
+    {
+        if (musicVolumeValueText != null)
+            musicVolumeValueText.text = Mathf.RoundToInt((musicVolumeSlider != null ? musicVolumeSlider.value : 0f) * 100f) + "%";
+        if (sfxVolumeValueText != null)
+            sfxVolumeValueText.text = Mathf.RoundToInt((sfxVolumeSlider != null ? sfxVolumeSlider.value : 0f) * 100f) + "%";
     }
 
     private void BuildResultScreen()
@@ -468,7 +558,7 @@ public class GameplayUI : MonoBehaviour
         playerMapArrow.localEulerAngles = Vector3.zero;
     }
 
-    private GameObject CreatePanel(string name, bool dim = true)
+    private GameObject CreatePanel(string name, bool dim = true, float dimAlpha = 0.55f)
     {
         GameObject panel = new GameObject(name, typeof(RectTransform));
         panel.transform.SetParent(transform, false);
@@ -481,10 +571,29 @@ public class GameplayUI : MonoBehaviour
         if (dim)
         {
             Image image = panel.AddComponent<Image>();
-            image.color = new Color(0f, 0f, 0f, 0.55f);
+            image.color = new Color(0f, 0f, 0f, dimAlpha);
         }
 
         return panel;
+    }
+
+    private static Transform CreateCenteredCard(Transform parent, string name, Vector2 size)
+    {
+        GameObject card = new GameObject(name, typeof(RectTransform));
+        card.transform.SetParent(parent, false);
+
+        RectTransform rect = card.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = size;
+        rect.anchoredPosition = Vector2.zero;
+
+        Image image = card.AddComponent<Image>();
+        image.color = new Color(0.06f, 0.1f, 0.14f, 0.94f);
+        image.raycastTarget = false;
+
+        return card.transform;
     }
 
     private Text AddHudLabel(Transform parent, string name, string text, int fontSize)
@@ -562,6 +671,68 @@ public class GameplayUI : MonoBehaviour
         return button;
     }
 
+    private Slider AddSlider(Transform parent, string name, float x, float y, float width, UnityEngine.Events.UnityAction<float> onValueChanged)
+    {
+        GameObject sliderGo = new GameObject(name, typeof(RectTransform));
+        sliderGo.transform.SetParent(parent, false);
+        RectTransform sliderRect = sliderGo.GetComponent<RectTransform>();
+        sliderRect.sizeDelta = new Vector2(width, 40f);
+        sliderRect.anchoredPosition = new Vector2(x, y);
+
+        GameObject background = new GameObject("Background", typeof(RectTransform));
+        background.transform.SetParent(sliderGo.transform, false);
+        RectTransform backgroundRect = background.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = new Vector2(0f, 0.35f);
+        backgroundRect.anchorMax = new Vector2(1f, 0.65f);
+        backgroundRect.offsetMin = Vector2.zero;
+        backgroundRect.offsetMax = Vector2.zero;
+        Image backgroundImage = background.AddComponent<Image>();
+        backgroundImage.color = new Color(0.12f, 0.16f, 0.22f, 0.95f);
+
+        GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+        fillArea.transform.SetParent(sliderGo.transform, false);
+        RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
+        fillAreaRect.anchorMin = new Vector2(0f, 0.35f);
+        fillAreaRect.anchorMax = new Vector2(1f, 0.65f);
+        fillAreaRect.offsetMin = new Vector2(8f, 0f);
+        fillAreaRect.offsetMax = new Vector2(-8f, 0f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform));
+        fill.transform.SetParent(fillArea.transform, false);
+        RectTransform fillRect = fill.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+        Image fillImage = fill.AddComponent<Image>();
+        fillImage.color = new Color(0.25f, 0.72f, 1f, 0.95f);
+
+        GameObject handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+        handleArea.transform.SetParent(sliderGo.transform, false);
+        RectTransform handleAreaRect = handleArea.GetComponent<RectTransform>();
+        handleAreaRect.anchorMin = Vector2.zero;
+        handleAreaRect.anchorMax = Vector2.one;
+        handleAreaRect.offsetMin = new Vector2(8f, 0f);
+        handleAreaRect.offsetMax = new Vector2(-8f, 0f);
+
+        GameObject handle = new GameObject("Handle", typeof(RectTransform));
+        handle.transform.SetParent(handleArea.transform, false);
+        RectTransform handleRect = handle.GetComponent<RectTransform>();
+        handleRect.sizeDelta = new Vector2(22f, 22f);
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = Color.white;
+
+        Slider slider = sliderGo.AddComponent<Slider>();
+        slider.fillRect = fillRect;
+        slider.handleRect = handleRect;
+        slider.targetGraphic = handleImage;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.value = 0.7f;
+        if (onValueChanged != null) slider.onValueChanged.AddListener(onValueChanged);
+        return slider;
+    }
+
     private static void EnsureEventSystem()
     {
         if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
@@ -577,6 +748,7 @@ public class GameplayUI : MonoBehaviour
         if (hud != null) hud.SetActive(active == hud);
         if (pauseMenu != null) pauseMenu.SetActive(active == pauseMenu);
         if (resultScreen != null) resultScreen.SetActive(active == resultScreen);
+        if (settingsMenu != null) settingsMenu.SetActive(active == settingsMenu);
     }
 
     private static string BuildLevelInfo(int levelIndex)

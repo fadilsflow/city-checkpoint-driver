@@ -26,6 +26,7 @@ public class GameplayUI : MonoBehaviour
 
     [Header("Mobile Controls")]
     public MobileCarControls mobileControls;
+    public MobileBrakeButton brakeButton;
     public bool showMobileControls = true;
     public bool showMobileControlsInEditor = true;
 
@@ -47,6 +48,11 @@ public class GameplayUI : MonoBehaviour
     public Text musicVolumeValueText;
     public Text sfxVolumeValueText;
     public Text gameInfoText;
+    [Header("Tutorial")]
+    public GameObject tutorialOverlay;
+    public Text tutorialTitleText;
+    public Text tutorialDescriptionText;
+
 
     private const float HudEdgePadding = 24f;
     private const float HudMapSize = 180f;
@@ -85,6 +91,7 @@ public class GameplayUI : MonoBehaviour
         if (car != null) playerRigidbody = car.GetComponent<Rigidbody>();
         EnsureBuiltUI();
         if (car != null && mobileControls != null) car.mobileControls = mobileControls;
+        if (car != null && brakeButton != null) car.brakeButton = brakeButton;
     }
 
     private void OnEnable()
@@ -152,6 +159,14 @@ public class GameplayUI : MonoBehaviour
         RefreshLevelSelect();
     }
 
+    public void ShowTutorial(string title, string description)
+    {
+        if (tutorialOverlay == null) BuildTutorialOverlay();
+        if (tutorialTitleText != null) tutorialTitleText.text = title;
+        if (tutorialDescriptionText != null) tutorialDescriptionText.text = description;
+        SetOnly(tutorialOverlay);
+    }
+
     public void RefreshHUD()
     {
         if (levelManager == null) return;
@@ -183,9 +198,18 @@ public class GameplayUI : MonoBehaviour
     public void ButtonResume() => GameManager.Instance.Resume();
     public void ButtonRestart() => GameManager.Instance.Restart();
     public void ButtonNextLevel() => GameManager.Instance.NextLevel();
-    public void ButtonQuit() => Application.Quit();
+    public void ButtonQuit()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
     public void ButtonSettings() => GameManager.Instance.ShowSettings();
     public void ButtonSettingsBack() => GameManager.Instance.CloseSettings();
+    public void ButtonStartLevel() => GameManager.Instance.StartLevelAfterTutorial();
+
 
     private void EnsureBuiltUI()
     {
@@ -211,6 +235,7 @@ public class GameplayUI : MonoBehaviour
         if (pauseMenu == null) BuildPauseMenu();
         if (resultScreen == null) BuildResultScreen();
         if (settingsMenu == null) BuildSettingsMenu();
+        if (tutorialOverlay == null) BuildTutorialOverlay();
     }
 
     private void BuildMainMenu()
@@ -409,11 +434,41 @@ public class GameplayUI : MonoBehaviour
             label.color = new Color(1f, 1f, 1f, 0.78f);
         }
 
+        if (brakeButton == null)
+            brakeButton = hud.GetComponentInChildren<MobileBrakeButton>(true);
+
+        if (brakeButton == null)
+        {
+            GameObject btn = new GameObject("MobileBrake", typeof(RectTransform));
+            btn.transform.SetParent(hud.transform, false);
+
+            RectTransform btnRect = btn.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(1f, 0f);
+            btnRect.anchorMax = new Vector2(1f, 0f);
+            btnRect.pivot = new Vector2(0.5f, 0.5f);
+            btnRect.sizeDelta = new Vector2(140f, 140f);
+            btnRect.anchoredPosition = new Vector2(-170f, 155f);
+
+            Image baseImage = btn.AddComponent<Image>();
+            baseImage.sprite = CreateCircleSprite("MobileBrakeBase", 96);
+            baseImage.color = new Color(0.08f, 0.13f, 0.18f, 0.58f);
+
+            brakeButton = btn.AddComponent<MobileBrakeButton>();
+
+            Text label = AddText(btn.transform, "BrakeLabel", "BRAKE", 0f, 0f, 24);
+            label.color = new Color(1f, 1f, 1f, 0.9f);
+        }
+
+
         mobileControls.gameObject.SetActive(ShouldShowMobileControls());
+        if (brakeButton != null)
+            brakeButton.gameObject.SetActive(ShouldShowMobileControls());
 
         CarController3D car = FindFirstObjectByType<CarController3D>();
         if (car != null && car.mobileControls == null)
             car.mobileControls = mobileControls;
+        if (car != null && car.brakeButton == null)
+            car.brakeButton = brakeButton;
     }
 
     private bool ShouldShowMobileControls()
@@ -655,6 +710,24 @@ public class GameplayUI : MonoBehaviour
         AddButton(resultScreen.transform, "MenuButton", "MAIN MENU", 220, -60, ButtonMainMenu);
     }
 
+    private void BuildTutorialOverlay()
+    {
+        tutorialOverlay = CreatePanel("TutorialOverlay", dimAlpha: 0.85f);
+        Transform card = CreateCenteredCard(tutorialOverlay.transform, "TutorialCard", new Vector2(700f, 480f));
+        
+        tutorialTitleText = AddText(card, "TutorialTitle", "Welcome", 0, 180, 44);
+        tutorialTitleText.rectTransform.sizeDelta = new Vector2(620f, 56f);
+        
+        tutorialDescriptionText = AddText(card, "TutorialDesc", "", 0, 60, 24);
+        tutorialDescriptionText.rectTransform.sizeDelta = new Vector2(620f, 160f);
+        tutorialDescriptionText.alignment = TextAnchor.UpperCenter;
+        tutorialDescriptionText.lineSpacing = 1.2f;
+        
+        Button startBtn = AddButton(card, "StartButton", "HERE WE GO", 0, -130, ButtonStartLevel);
+        startBtn.GetComponent<Image>().color = Color.white;
+        startBtn.transform.Find("Text").GetComponent<Text>().color = new Color(0.08f, 0.13f, 0.18f);
+    }
+
     private void UpdateMapAndDirection()
     {
         if (levelManager == null || levelManager.CurrentMode != GameMode.Checkpoint) return;
@@ -824,6 +897,7 @@ public class GameplayUI : MonoBehaviour
         if (pauseMenu != null) pauseMenu.SetActive(active == pauseMenu);
         if (resultScreen != null) resultScreen.SetActive(active == resultScreen);
         if (settingsMenu != null) settingsMenu.SetActive(active == settingsMenu);
+        if (tutorialOverlay != null) tutorialOverlay.SetActive(active == tutorialOverlay);
     }
 
     private static string BuildLevelInfo(int levelIndex)

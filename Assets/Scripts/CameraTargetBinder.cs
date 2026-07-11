@@ -46,6 +46,9 @@ public class CameraTargetBinder : MonoBehaviour
 
     private Camera FindSceneCamera()
     {
+        Camera existing = FindFirstObjectByType<Camera>();
+        if (existing != null) return existing;
+
         GameObject cameraRoot = GameObject.Find(cameraRootPath);
         if (cameraRoot != null)
         {
@@ -56,9 +59,6 @@ public class CameraTargetBinder : MonoBehaviour
             if (rootCamera == null) rootCamera = cameraRoot.AddComponent<Camera>();
             return rootCamera;
         }
-
-        Camera main = Camera.main;
-        if (main != null) return main;
 
         GameObject fallback = new GameObject("Main Camera");
         fallback.transform.position = new Vector3(0f, 4f, -8f);

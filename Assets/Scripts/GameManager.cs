@@ -8,6 +8,8 @@ public class GameManager : MonoBehaviour
     public LevelManager levelManager;
     public GameplayUI ui;
 
+    private int pendingLevelIndex = -1;
+
     private GameState settingsReturnState = GameState.MainMenu;
 
     private void Awake()
@@ -86,10 +88,26 @@ public class GameManager : MonoBehaviour
 
     public void StartLevel(int zeroBasedIndex)
     {
+        pendingLevelIndex = zeroBasedIndex;
+        if (ui != null && levelManager != null && zeroBasedIndex >= 0 && zeroBasedIndex < levelManager.levels.Length)
+        {
+            LevelManager.LevelConfig config = levelManager.levels[zeroBasedIndex];
+            string desc = !string.IsNullOrEmpty(config.tutorialDescription)
+                ? config.tutorialDescription
+                : "Complete all checkpoints before time runs out!";
+            levelManager.PrepareLevelForTutorial(zeroBasedIndex);
+            ui.ShowTutorial("Welcome to " + config.levelName, desc);
+        }
+    }
+
+    public void StartLevelAfterTutorial()
+    {
+        if (pendingLevelIndex < 0) return;
         State = GameState.Playing;
         Time.timeScale = 1f;
-        if (levelManager != null) levelManager.StartLevel(zeroBasedIndex);
+        if (levelManager != null) levelManager.StartLevel(pendingLevelIndex);
         if (ui != null) ui.ShowHUD(GameMode.Checkpoint);
+        pendingLevelIndex = -1;
     }
 
     public void Pause()

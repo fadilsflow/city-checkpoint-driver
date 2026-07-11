@@ -7,6 +7,8 @@ public class LevelManager : MonoBehaviour
     public class LevelConfig
     {
         public string levelName;
+        [TextArea(3, 6)]
+        public string tutorialDescription;
         public Transform spawnPoint;
         public CheckpointGroup checkpointGroup;
         public float timeLimit = 90f;
@@ -91,6 +93,24 @@ public class LevelManager : MonoBehaviour
         ElapsedTime = 0f;
         TimeRemaining = config.timeLimit;
         IsRunning = true;
+        OnLevelDataChanged?.Invoke();
+    }
+
+    public void PrepareLevelForTutorial(int levelIndex)
+    {
+        if (levelIndex < 0 || levelIndex >= levels.Length) return;
+
+        CurrentMode = GameMode.Checkpoint;
+        CurrentLevelIndex = levelIndex;
+        LevelConfig config = levels[levelIndex];
+
+        DeactivateAllCheckpoints();
+        MovePlayerTo(config.spawnPoint);
+
+        ActiveCheckpointGroup = config.checkpointGroup;
+        if (ActiveCheckpointGroup != null)
+            ActiveCheckpointGroup.Initialize(this);
+
         OnLevelDataChanged?.Invoke();
     }
 

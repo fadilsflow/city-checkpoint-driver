@@ -31,6 +31,7 @@ public class CarController3D : MonoBehaviour
 
     [Header("Mobile Input")]
     public MobileCarControls mobileControls;
+    public MobileBrakeButton brakeButton;
     public bool useMobileControls = true;
 
     private Rigidbody rb;
@@ -38,6 +39,7 @@ public class CarController3D : MonoBehaviour
     private float throttle;
     private bool braking;
     private bool handBraking;
+    private float steerInputCached;
 
     private Quaternion frontLeftVisualOffset = Quaternion.identity;
     private Quaternion frontRightVisualOffset = Quaternion.identity;
@@ -63,8 +65,11 @@ public class CarController3D : MonoBehaviour
 
         Vector2 mobileInput = GetMobileInput();
         throttle = UseStrongerAxis(Input.GetAxis("Vertical"), mobileInput.y);
-        braking = Input.GetKey(KeyCode.Space);
+        bool mobileBrake = brakeButton != null && brakeButton.IsPressed;
+        braking = Input.GetKey(KeyCode.Space) || mobileBrake;
         handBraking = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
+        steerInputCached = UseStrongerAxis(Input.GetAxis("Horizontal"), mobileInput.x);
         UpdateWheelVisuals();
     }
 
@@ -72,11 +77,9 @@ public class CarController3D : MonoBehaviour
     {
         ResolveMobileControls();
 
-        Vector2 mobileInput = GetMobileInput();
-        float steerInput = UseStrongerAxis(Input.GetAxis("Horizontal"), mobileInput.x);
         float speedKph = rb.linearVelocity.magnitude * 3.6f;
         float speedSteerFactor = Mathf.Lerp(1f, 0.45f, Mathf.InverseLerp(25f, maxSpeedKph, speedKph));
-        steerAngle = Mathf.Lerp(steerAngle, steerInput * maxSteerAngle * speedSteerFactor, steerResponse * Time.fixedDeltaTime);
+        steerAngle = Mathf.Lerp(steerAngle, steerInputCached * maxSteerAngle * speedSteerFactor, steerResponse * Time.fixedDeltaTime);
 
         frontLeftCollider.steerAngle = steerAngle;
         frontRightCollider.steerAngle = steerAngle;

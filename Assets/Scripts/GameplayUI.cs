@@ -56,8 +56,8 @@ public class GameplayUI : MonoBehaviour
 
     private const float HudEdgePadding = 24f;
     private const float HudMapSize = 180f;
-    private const float HudPauseWidth = 130f;
-    private const float HudPauseHeight = 48f;
+    private const float HudPauseWidth = 170f;
+    private const float HudPauseHeight = 64f;
     private const float HudTopRightGap = 12f;
     private const float HudLabelWidth = 420f;
     private const float HudLabelHeight = 44f;
@@ -404,15 +404,15 @@ public class GameplayUI : MonoBehaviour
             analogRect.anchorMin = Vector2.zero;
             analogRect.anchorMax = Vector2.zero;
             analogRect.pivot = new Vector2(0.5f, 0.5f);
-            analogRect.sizeDelta = new Vector2(190f, 190f);
-            analogRect.anchoredPosition = new Vector2(170f, 155f);
+            analogRect.sizeDelta = new Vector2(260f, 260f);
+            analogRect.anchoredPosition = new Vector2(190f, 180f);
 
             Image baseImage = analog.AddComponent<Image>();
             baseImage.sprite = CreateCircleSprite("MobileAnalogBase", 96);
             baseImage.color = new Color(0.08f, 0.13f, 0.18f, 0.58f);
 
             mobileControls = analog.AddComponent<MobileCarControls>();
-            mobileControls.radius = 72f;
+            mobileControls.radius = 98f;
 
             GameObject knob = new GameObject("Knob", typeof(RectTransform));
             knob.transform.SetParent(analog.transform, false);
@@ -421,7 +421,7 @@ public class GameplayUI : MonoBehaviour
             knobRect.anchorMin = new Vector2(0.5f, 0.5f);
             knobRect.anchorMax = new Vector2(0.5f, 0.5f);
             knobRect.pivot = new Vector2(0.5f, 0.5f);
-            knobRect.sizeDelta = new Vector2(82f, 82f);
+            knobRect.sizeDelta = new Vector2(108f, 108f);
             knobRect.anchoredPosition = Vector2.zero;
 
             Image knobImage = knob.AddComponent<Image>();
@@ -430,8 +430,8 @@ public class GameplayUI : MonoBehaviour
             knobImage.raycastTarget = false;
             mobileControls.knob = knobRect;
 
-            Text label = AddText(analog.transform, "AnalogLabel", "DRIVE", 0f, -120f, 22);
-            label.color = new Color(1f, 1f, 1f, 0.78f);
+            Text label = AddText(analog.transform, "AnalogLabel", "STEER / DRIVE", 0f, -155f, 24);
+            label.color = new Color(1f, 1f, 1f, 0.9f);
         }
 
         if (brakeButton == null)
@@ -446,8 +446,8 @@ public class GameplayUI : MonoBehaviour
             btnRect.anchorMin = new Vector2(1f, 0f);
             btnRect.anchorMax = new Vector2(1f, 0f);
             btnRect.pivot = new Vector2(0.5f, 0.5f);
-            btnRect.sizeDelta = new Vector2(140f, 140f);
-            btnRect.anchoredPosition = new Vector2(-170f, 155f);
+            btnRect.sizeDelta = new Vector2(190f, 190f);
+            btnRect.anchoredPosition = new Vector2(-180f, 180f);
 
             Image baseImage = btn.AddComponent<Image>();
             baseImage.sprite = CreateCircleSprite("MobileBrakeBase", 96);
@@ -455,9 +455,11 @@ public class GameplayUI : MonoBehaviour
 
             brakeButton = btn.AddComponent<MobileBrakeButton>();
 
-            Text label = AddText(btn.transform, "BrakeLabel", "BRAKE", 0f, 0f, 24);
-            label.color = new Color(1f, 1f, 1f, 0.9f);
+            Text label = AddText(btn.transform, "BrakeLabel", "BRAKE", 0f, 0f, 30);
+            label.color = Color.white;
         }
+
+        ApplyMobileControlsLayout();
 
 
         mobileControls.gameObject.SetActive(ShouldShowMobileControls());
@@ -469,6 +471,27 @@ public class GameplayUI : MonoBehaviour
             car.mobileControls = mobileControls;
         if (car != null && car.brakeButton == null)
             car.brakeButton = brakeButton;
+    }
+
+    private void ApplyMobileControlsLayout()
+    {
+        if (mobileControls != null)
+        {
+            RectTransform analogRect = mobileControls.GetComponent<RectTransform>();
+            analogRect.sizeDelta = new Vector2(260f, 260f);
+            analogRect.anchoredPosition = new Vector2(190f, 180f);
+            mobileControls.radius = 98f;
+
+            if (mobileControls.knob != null)
+                mobileControls.knob.sizeDelta = new Vector2(108f, 108f);
+        }
+
+        if (brakeButton != null)
+        {
+            RectTransform brakeRect = brakeButton.GetComponent<RectTransform>();
+            brakeRect.sizeDelta = new Vector2(190f, 190f);
+            brakeRect.anchoredPosition = new Vector2(-180f, 180f);
+        }
     }
 
     private bool ShouldShowMobileControls()

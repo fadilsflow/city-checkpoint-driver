@@ -27,11 +27,19 @@ public class LevelManager : MonoBehaviour
     public bool IsRunning { get; private set; }
     public CheckpointGroup ActiveCheckpointGroup { get; private set; }
 
+    [Header("Vehicle Recovery")]
+    [Tooltip("Reset the car after it falls this far below the active spawn point.")]
+    public float fallResetDistance = 20f;
+    [Tooltip("Reset the car if it travels this far horizontally from the active spawn point.")]
+    public float outOfMapResetDistance = 600f;
+
     public event Action OnLevelDataChanged;
     public event Action<bool, float, int> OnLevelEnded;
 
     private Rigidbody playerRigidbody;
     private CarController3D playerCar;
+    private Transform activeSpawn;
+    private bool isRecoveringPlayer;
 
     private void Awake()
     {
@@ -52,6 +60,8 @@ public class LevelManager : MonoBehaviour
 
     private void Update()
     {
+        RecoverPlayerIfOutOfBounds();
+
         if (!IsRunning || CurrentMode != GameMode.Checkpoint) return;
 
         ElapsedTime += Time.deltaTime;
@@ -172,6 +182,8 @@ public class LevelManager : MonoBehaviour
     {
         if (player == null || spawn == null) return;
 
+        activeSpawn = spawn;
+
         if (playerRigidbody != null)
         {
             playerRigidbody.linearVelocity = Vector3.zero;
@@ -184,6 +196,29 @@ public class LevelManager : MonoBehaviour
         player.SetPositionAndRotation(spawn.position, spawn.rotation);
         if (playerCar != null) playerCar.ResetCarState();
         Physics.SyncTransforms();
+    }
+
+    private void RecoverPlayerIfOutOfBounds()
+    {
+        if (!IsRunning || player == null || activeSpawn == null || isRecoveringPlayer) return;
+
+        Vector3 offset = player.position - activeSpawn.position;
+        bool fellBelowMap = offset.y < -fallResetDistance;
+        bool leftMapBounds = new Vector2(offset.x, offset.z).sqrMagnitude >
+                             outOfMapResetDistance * outOfMapResetDistance;
+
+        if (!fellBelowMap && !leftMapBounds) return;
+
+        RecoverPlayerToActiveSpawn();
+    }
+
+    public void RecoverPlayerToActiveSpawn()
+    {
+        if (player == null || activeSpawn == null || isRecoveringPlayer) return;
+
+        isRecoveringPlayer = true;
+        MovePlayerTo(activeSpawn);
+        isRecoveringPlayer = false;
     }
 
     private void DeactivateAllCheckpoints()

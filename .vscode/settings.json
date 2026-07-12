@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "m2049.slnx"
+    "dotnet.defaultSolution": "city-checkpoint.slnx"
 }
